@@ -96,8 +96,8 @@ impl Handle {
     }
 
     cfg_io_uring! {
-        pub(crate) fn try_io(&self) -> Option<&crate::runtime::io::Handle> {
-            self.io.as_ref()
+        pub(crate) fn has_io(&self) -> bool {
+            self.io.as_ref().is_some()
         }
     }
 
