@@ -1017,7 +1017,9 @@ impl Inner {
         ))]
         {
             if let Ok(handle) = crate::runtime::Handle::try_current() {
-                if let Some(driver_handle) = handle.inner.driver().try_io() {
+                let driver = handle.inner.driver();
+                if driver.has_io() {
+                    let driver_handle = driver.io();
                     if driver_handle.is_uring_ready(io_uring::opcode::Read::CODE) {
                         // Fast path: uring already initialized and Read supported.
                         let fd: crate::io::uring::utils::ArcFd = std;
@@ -1084,14 +1086,14 @@ impl Inner {
     ))]
     async fn lazy_init_read(std: Arc<StdFile>, buf: Buf, max_buf_size: usize) -> (Operation, Buf) {
         let handle = crate::runtime::Handle::current();
-        let use_uring = match handle.inner.driver().try_io() {
-            Some(driver_handle) => driver_handle
+        let driver = handle.inner.driver();
+        if driver.has_io()
+            && driver
+                .io()
                 .check_and_init(io_uring::opcode::Read::CODE)
                 .await
-                .unwrap_or_default(),
-            None => false,
-        };
-        if use_uring {
+                .unwrap_or_default()
+        {
             let fd: crate::io::uring::utils::ArcFd = std;
             Self::uring_read(fd, buf, max_buf_size).await
         } else {
